@@ -28,6 +28,8 @@ const statDone = document.getElementById("statDone");
 
 const diffOriginal = document.getElementById("diffOriginal");
 const diffSanitized = document.getElementById("diffSanitized");
+const diffOriginalScroll = document.getElementById("diffOriginalScroll");
+const diffSanitizedScroll = document.getElementById("diffSanitizedScroll");
 const fullOriginal = document.getElementById("fullOriginal");
 const fullSanitized = document.getElementById("fullSanitized");
 
@@ -104,24 +106,6 @@ function setTab(name) {
     btn.classList.toggle("is-active", on);
     btn.setAttribute("aria-selected", on ? "true" : "false");
   }
-}
-
-function setResultsViews(input, result) {
-  lastOriginal = input;
-  lastSanitized = result;
-  diffOriginal.textContent = input || "";
-  diffSanitized.textContent = result;
-  fullOriginal.textContent = input;
-  fullSanitized.textContent = result;
-}
-
-function setDiffPlaceholder() {
-  lastOriginal = "";
-  lastSanitized = "";
-  diffOriginal.textContent = DIFF_PLACEHOLDER;
-  diffSanitized.textContent = "";
-  fullOriginal.textContent = "";
-  fullSanitized.textContent = "";
 }
 
 function buildLineStarts(text) {
@@ -272,6 +256,124 @@ function escapeHtml(s) {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+function mergeRanges(ranges) {
+  if (!ranges.length) return [];
+  const sorted = [...ranges].sort((a, b) => a.start - b.start);
+  const out = [];
+  let cur = { ...sorted[0] };
+  for (let i = 1; i < sorted.length; i++) {
+    const n = sorted[i];
+    if (n.start <= cur.end) {
+      cur.end = Math.max(cur.end, n.end);
+    } else {
+      out.push(cur);
+      cur = { ...n };
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/** Highlights on the raw input: same detectors as the pipeline (for UI only). */
+function collectOriginalHighlightRanges(input) {
+  const ranges = [];
+  if (!input) return ranges;
+  if (pruneApiKeysToggle.checked) {
+    const api = detectMatches(input, getApiKeyPatternsForRun(), "api_key");
+    for (const f of api) ranges.push({ start: f.start, end: f.end });
+  }
+  if (redactPiiToggle.checked) {
+    const pii = detectMatches(input, piiPatterns, "pii");
+    for (const f of pii) ranges.push({ start: f.start, end: f.end });
+  }
+  return mergeRanges(ranges);
+}
+
+/** Placeholders inserted by redactText: [API_KEY_*] or [PII_LABEL]. */
+function collectPlaceholderRangesFromSanitized(text) {
+  const ranges = [];
+  if (!text) return ranges;
+  const re = /\[(?:API_KEY_[A-Z0-9_]+|[A-Z][A-Z0-9_]*)\]/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    ranges.push({ start: m.index, end: m.index + m[0].length });
+  }
+  return mergeRanges(ranges);
+}
+
+function wrapHighlights(text, ranges, markClass) {
+  if (!ranges.length) return escapeHtml(text);
+  let html = "";
+  let pos = 0;
+  for (const r of ranges) {
+    if (r.end <= r.start) continue;
+    if (r.start > pos) html += escapeHtml(text.slice(pos, r.start));
+    html += `<mark class="${markClass}">` + escapeHtml(text.slice(r.start, r.end)) + "</mark>";
+    pos = r.end;
+  }
+  if (pos < text.length) html += escapeHtml(text.slice(pos));
+  return html;
+}
+
+function resetDiffScroll() {
+  if (diffOriginalScroll) diffOriginalScroll.scrollTop = 0;
+  if (diffSanitizedScroll) diffSanitizedScroll.scrollTop = 0;
+}
+
+function setResultsViews(input, result) {
+  lastOriginal = input;
+  lastSanitized = result;
+  const origRanges = collectOriginalHighlightRanges(input);
+  const outRanges = collectPlaceholderRangesFromSanitized(result);
+  const origHtml = wrapHighlights(input, origRanges, "diff-hit-src");
+  const outHtml = wrapHighlights(result, outRanges, "diff-hit-out");
+  diffOriginal.innerHTML = origHtml;
+  diffSanitized.innerHTML = outHtml;
+  fullOriginal.innerHTML = origHtml;
+  fullSanitized.innerHTML = outHtml;
+  resetDiffScroll();
+}
+
+function setDiffPlaceholder() {
+  lastOriginal = "";
+  lastSanitized = "";
+  diffOriginal.textContent = DIFF_PLACEHOLDER;
+  diffSanitized.textContent = "";
+  fullOriginal.textContent = "";
+  fullSanitized.textContent = "";
+  resetDiffScroll();
+}
+
+function setupDiffScrollSync() {
+  if (!diffOriginalScroll || !diffSanitizedScroll) return;
+  let syncing = false;
+  const sync = (from, to) => {
+    if (syncing) return;
+    const maxFrom = from.scrollHeight - from.clientHeight;
+    const maxTo = to.scrollHeight - to.clientHeight;
+    syncing = true;
+    if (maxFrom <= 0 || maxTo <= 0) {
+      to.scrollTop = from.scrollTop;
+    } else {
+      const ratio = from.scrollTop / maxFrom;
+      to.scrollTop = Math.round(ratio * maxTo);
+    }
+    requestAnimationFrame(() => {
+      syncing = false;
+    });
+  };
+  diffOriginalScroll.addEventListener(
+    "scroll",
+    () => sync(diffOriginalScroll, diffSanitizedScroll),
+    { passive: true }
+  );
+  diffSanitizedScroll.addEventListener(
+    "scroll",
+    () => sync(diffSanitizedScroll, diffOriginalScroll),
+    { passive: true }
+  );
 }
 
 function makeDetectAndRedactStep({ enabledEl, patterns, type }) {
@@ -452,4 +554,5 @@ async function initApp() {
   }
 }
 
+setupDiffScrollSync();
 initApp();

@@ -518,6 +518,7 @@ a:hover {
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  flex: 1;
 }
 
 .diff-col:first-child {
@@ -564,12 +565,22 @@ a:hover {
   border-bottom: 1px solid rgba(51, 65, 85, 0.5);
 }
 
-.mono-pre {
-  margin: 0;
-  padding: 0.75rem;
+.diff-scroll {
+  flex: 1;
   min-height: 120px;
   max-height: min(420px, 50vh);
   overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.diff-scroll-tall {
+  max-height: min(520px, 55vh);
+  min-height: 200px;
+}
+
+.mono-pre-inner {
+  margin: 0;
+  padding: 0.75rem;
   white-space: pre-wrap;
   word-break: break-word;
   font-family: ui-monospace, "SF Mono", Menlo, Monaco, "Cascadia Code", monospace;
@@ -579,9 +590,18 @@ a:hover {
   background: transparent;
 }
 
-.mono-pre-tall {
-  max-height: min(520px, 55vh);
-  min-height: 200px;
+.mono-pre-inner mark.diff-hit-src {
+  background: rgba(248, 113, 113, 0.32);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.mono-pre-inner mark.diff-hit-out {
+  background: rgba(0, 229, 192, 0.28);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
 }
 
 .stats-row {

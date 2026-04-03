@@ -69,22 +69,30 @@
               <div class="diff-grid">
                 <div class="diff-col">
                   <div class="col-label">Original Content</div>
-                  <pre id="diffOriginal" class="mono-pre" aria-label="Original text"></pre>
+                  <div class="diff-scroll" id="diffOriginalScroll">
+                    <pre id="diffOriginal" class="mono-pre-inner" aria-label="Original text"></pre>
+                  </div>
                 </div>
                 <div class="diff-vsep" aria-hidden="true"></div>
                 <div class="diff-col">
                   <div class="col-label">Sanitized Output</div>
-                  <pre id="diffSanitized" class="mono-pre" aria-label="Sanitized text"></pre>
+                  <div class="diff-scroll" id="diffSanitizedScroll">
+                    <pre id="diffSanitized" class="mono-pre-inner" aria-label="Sanitized text"></pre>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div id="panelOriginal" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnOriginal" hidden>
-              <pre id="fullOriginal" class="mono-pre mono-pre-tall"></pre>
+              <div class="diff-scroll diff-scroll-tall">
+                <pre id="fullOriginal" class="mono-pre-inner"></pre>
+              </div>
             </div>
 
             <div id="panelSanitized" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnSanitized" hidden>
-              <pre id="fullSanitized" class="mono-pre mono-pre-tall"></pre>
+              <div class="diff-scroll diff-scroll-tall">
+                <pre id="fullSanitized" class="mono-pre-inner"></pre>
+              </div>
             </div>
           </div>
 
