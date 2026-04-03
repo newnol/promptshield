@@ -1,18 +1,4 @@
-const apiKeyPatterns = {
-  openai: [/sk-proj-[a-zA-Z0-9\-_]{32,}/g, /sk-[a-zA-Z0-9]{48,}/g],
-  aws: [/AKIA[0-9A-Z]{16}/g, /ASIA[0-9A-Z]{16}/g],
-  google: [/AIza[0-9A-Za-z\-_]{35}/g],
-  stripe: [/sk_live_[a-zA-Z0-9]{24,}/g, /rk_live_[a-zA-Z0-9]{24,}/g, /pk_live_[a-zA-Z0-9]{24,}/g],
-  github: [/ghp_[a-zA-Z0-9]{36,255}/g, /ghu_[a-zA-Z0-9]{36,255}/g, /ghs_[a-zA-Z0-9]{36,255}/g, /gho_[a-zA-Z0-9]{36,255}/g],
-  anthropic: [/sk-ant-[a-zA-Z0-9\-_]{32,}/g],
-  huggingface: [/hf_[a-zA-Z0-9]{34,}/g],
-  telegram_bot: [/\b\d{9,11}:[a-zA-Z0-9_-]{35,}\b/g],
-  tavily: [/\btvly-[a-zA-Z0-9_-]{20,}\b/g],
-  generic: [
-    /\b[A-Za-z0-9]{32,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g,
-    /\b(key|token|secret|api[_-]?key|apiKey|botToken)[\s:=]+['"]?[A-Za-z0-9_-]{24,}['"]?/gi
-  ]
-};
+let apiKeyPatterns = {};
 
 const piiPatterns = {
   ssn: [/\b\d{3}-\d{2}-\d{4}\b/g],
@@ -68,6 +54,36 @@ function indexToLineCol(lineStarts, index) {
 
 function cloneRegex(regex) {
   return new RegExp(regex.source, regex.flags);
+}
+
+function compileApiKeyPatternsFromRules(rules) {
+  const compiled = {};
+  for (const [provider, providerRules] of Object.entries(rules || {})) {
+    const patterns = [];
+    for (const rule of providerRules || []) {
+      if (!rule || !rule.regex) continue;
+      try {
+        // Keep generic labeled-secret pattern case-insensitive.
+        const flags = provider === "generic" ? "gi" : "g";
+        patterns.push(new RegExp(rule.regex, flags));
+      } catch (err) {
+        console.error(`Invalid regex for provider ${provider}:`, rule.regex, err);
+      }
+    }
+    if (patterns.length) {
+      compiled[provider] = patterns;
+    }
+  }
+  return compiled;
+}
+
+async function loadApiKeyPatterns() {
+  const response = await fetch("./api_key_rules.json", { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Failed to load api_key_rules.json (${response.status})`);
+  }
+  const rules = await response.json();
+  apiKeyPatterns = compileApiKeyPatternsFromRules(rules);
 }
 
 function detectMatches(text, groupedPatterns, type) {
@@ -241,3 +257,19 @@ fileInput.addEventListener("change", (event) => {
   };
   reader.readAsText(file);
 });
+
+async function initApp() {
+  processBtn.disabled = true;
+  processBtn.textContent = "Loading rules...";
+  try {
+    await loadApiKeyPatterns();
+    processBtn.disabled = false;
+    processBtn.textContent = "Process";
+  } catch (err) {
+    console.error("Failed to initialize API key patterns:", err);
+    processBtn.textContent = "Rules load failed";
+    findingsList.innerHTML = '<div class="muted">Failed to load API key rules. Check <code>web/api_key_rules.json</code>.</div>';
+  }
+}
+
+initApp();
