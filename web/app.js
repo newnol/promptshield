@@ -7,9 +7,10 @@ const apiKeyPatterns = {
   anthropic: [/sk-ant-[a-zA-Z0-9\-_]{32,}/g],
   huggingface: [/hf_[a-zA-Z0-9]{34,}/g],
   telegram_bot: [/\b\d{9,11}:[a-zA-Z0-9_-]{35,}\b/g],
+  tavily: [/\btvly-[a-zA-Z0-9_-]{20,}\b/g],
   generic: [
     /\b[A-Za-z0-9]{32,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g,
-    /\b(key|token|secret|api[_-]?key)[\s:=]+['"]?[A-Za-z0-9_-]{24,}['"]?/gi
+    /\b(key|token|secret|api[_-]?key|apiKey|botToken)[\s:=]+['"]?[A-Za-z0-9_-]{24,}['"]?/gi
   ]
 };
 
