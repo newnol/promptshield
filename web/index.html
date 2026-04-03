@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PromptShield</title>
-  <meta name="description" content="Client-side prompt sanitization. Scan and redact API keys and PII in your browser.">
+  <meta name="description" content="Client-side prompt sanitization and log-to-prompt extraction. Scan, redact, and compress content in your browser.">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -24,7 +24,7 @@
 
   <main class="container">
     <p class="page-lead">
-      Paste prompts, logs, or JSON configuration. Sanitization runs entirely in your browser — no uploads to PromptShield servers.
+      Paste prompts, logs, or JSON configuration. Sanitization and log extraction run entirely in your browser — no uploads to PromptShield servers.
     </p>
 
     <div class="workspace">
@@ -125,6 +125,45 @@
           <div id="findingsList" class="findings findings-stacked"></div>
           <button type="button" id="copyFindingsReportBtn" class="btn-secondary btn-findings-copy">Copy Findings Report</button>
         </section>
+
+        <section class="card card-logprompt">
+          <div class="findings-head">
+            <h2 class="section-title">Log → AI Prompt</h2>
+            <button type="button" id="copyPromptBtn" class="link-button">Copy Prompt</button>
+          </div>
+          <p class="prompt-lead">Extract the useful error blocks, trim noise, redact secrets, and turn the log into a prompt an AI can actually reason about.</p>
+          <div class="prompt-controls">
+            <label class="prompt-control">
+              <span>Prompt style</span>
+              <select id="promptModeSelect">
+                <option value="debug">Debug this error</option>
+                <option value="summary">Summarize the incident</option>
+                <option value="bug">Write a bug report</option>
+              </select>
+            </label>
+            <label class="prompt-control">
+              <span>Context lines</span>
+              <input id="contextLinesInput" type="number" min="0" max="12" value="3">
+            </label>
+            <label class="prompt-control">
+              <span>Max blocks</span>
+              <input id="maxBlocksInput" type="number" min="1" max="8" value="4">
+            </label>
+            <label class="prompt-control">
+              <span>Output format</span>
+              <select id="promptFormatSelect">
+                <option value="markdown">Markdown</option>
+                <option value="plain">Plain text</option>
+                <option value="json">JSON</option>
+              </select>
+            </label>
+          </div>
+          <div class="prompt-summary" id="promptSummary">Paste a log and hit <strong>Build AI Prompt</strong>.</div>
+          <pre id="promptOutput" class="mono-pre-inner prompt-output"></pre>
+          <div class="row-actions row-actions-tight">
+            <button type="button" id="buildPromptBtn" class="btn-primary btn-primary-inline">Build AI Prompt</button>
+          </div>
+        </section>
       </div>
 
       <aside class="col-side" aria-label="Sanitization rules">
@@ -147,6 +186,13 @@
                 <span class="rule-desc">Emails, phones, SSNs, …</span>
               </div>
               <input id="redactPiiToggle" type="checkbox" class="switch">
+            </label>
+            <label class="rule-row">
+              <div class="rule-text">
+                <span class="rule-title">Redact log secrets</span>
+                <span class="rule-desc">Bearer tokens, auth headers, cookies</span>
+              </div>
+              <input id="redactLogSecretsToggle" type="checkbox" class="switch" checked>
             </label>
             <label class="rule-row">
               <div class="rule-text">

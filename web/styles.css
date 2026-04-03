@@ -276,6 +276,10 @@ a:hover {
   gap: 0.5rem;
 }
 
+.row-actions-tight {
+  padding: 0.75rem 0 0;
+}
+
 .section-title {
   margin: 0 0 0.75rem;
   font-size: 1rem;
@@ -308,6 +312,11 @@ a:hover {
 .btn-primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.btn-primary-inline {
+  width: auto;
+  min-width: 180px;
 }
 
 .btn-secondary {
@@ -658,7 +667,7 @@ a:hover {
   font-weight: 600;
 }
 
-/* Detailed findings (mobile-style) */
+/* Detailed findings */
 .findings-head {
   display: flex;
   align-items: center;
@@ -775,6 +784,82 @@ a:hover {
 .muted code {
   font-size: 0.8em;
   color: var(--primary);
+}
+
+/* Log prompt builder */
+.card-logprompt .prompt-lead {
+  margin: 0 0 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.86rem;
+}
+
+.prompt-controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+@media (min-width: 700px) {
+  .prompt-controls {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.prompt-control {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.prompt-control span {
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.prompt-control select,
+.prompt-control input {
+  width: 100%;
+  min-height: 38px;
+  padding: 0.5rem 0.6rem;
+  color: var(--text-primary);
+  background: var(--surface-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.prompt-control select:focus,
+.prompt-control input:focus {
+  outline: 2px solid rgba(0, 229, 192, 0.3);
+  outline-offset: 1px;
+}
+
+.prompt-summary {
+  margin-bottom: 0.65rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(0, 229, 192, 0.08);
+  border: 1px solid rgba(0, 229, 192, 0.18);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
+.prompt-summary strong {
+  color: var(--primary);
+}
+
+.prompt-output {
+  min-height: 180px;
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: rgba(2, 6, 23, 0.85);
 }
 
 /* Audit panel */

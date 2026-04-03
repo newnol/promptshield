@@ -22,7 +22,7 @@ python3 -m http.server 8080
 # Open http://localhost:8080
 ```
 
-The web MVP runs entirely in your browser. It focuses on pruning/redacting API keys (and optional PII).
+The web MVP runs entirely in your browser. It focuses on pruning/redacting API keys, optional PII, and log secrets — plus a log-to-AI prompt builder that extracts the useful error blocks and trims noise.
 
 To keep web rules in sync with detector rules:
 ```bash
@@ -70,6 +70,7 @@ print(stats)  # {'tokens_before': 200, 'tokens_after': 120, 'saved_pct': 40}
 - ✅ **API Key Detection**: OpenAI, AWS, Google, Stripe, GitHub, custom patterns
 - ✅ **PII Redaction**: SSN, email, phone, credit cards, crypto addresses, IBAN
 - ✅ **Token Compression**: Strip markdown, whitespace, verbose text (~40% savings)
+- ✅ **Log-to-Prompt Extraction**: Paste raw container/app logs and get a compact AI-ready debug prompt
 - ✅ **Fully Offline**: No cloud, no API calls, runs locally
 - ✅ **Extensible**: YAML-based custom detection patterns
 - ✅ **CLI + Python API**: Use standalone or integrate into your code
@@ -109,7 +110,7 @@ promptshield/
 - [ ] CLI scaffold
 
 ### Phase 2 (Production)
-- [ ] Web UI (SvelteKit / React)
+- [x] Web UI (client-side static MVP)
 - [ ] REST API server
 - [ ] Browser extension (Chrome/Firefox)
 - [ ] MCP (Model Context Protocol) support
