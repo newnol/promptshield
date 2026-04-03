@@ -37,6 +37,34 @@ const findingsList = document.getElementById("findingsList");
 const pruneApiKeysToggle = document.getElementById("pruneApiKeysToggle");
 const redactPiiToggle = document.getElementById("redactPiiToggle");
 
+function buildLineStarts(text) {
+  // lineStarts[i] = index in `text` where line (i+1) starts (0-based).
+  const lineStarts = [0];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\n") lineStarts.push(i + 1);
+  }
+  return lineStarts;
+}
+
+function indexToLineCol(lineStarts, index) {
+  // Binary search for last lineStart <= index.
+  let low = 0;
+  let high = lineStarts.length - 1;
+  let lineIdx = 0;
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (lineStarts[mid] <= index) {
+      lineIdx = mid;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  const lineNumber = lineIdx + 1; // 1-based for users
+  const colNumber = index - lineStarts[lineIdx] + 1; // 1-based
+  return { lineNumber, colNumber };
+}
+
 function cloneRegex(regex) {
   return new RegExp(regex.source, regex.flags);
 }
@@ -100,7 +128,7 @@ function estimateTokens(text) {
   return Math.max(0, Math.round(words * 1.3 + chars / 20));
 }
 
-function summarizeFindings(apiFindings, piiFindings) {
+function renderFindings(apiFindings, piiFindings) {
   const all = [...apiFindings, ...piiFindings];
   findingsList.innerHTML = "";
   if (!all.length) {
@@ -112,26 +140,29 @@ function summarizeFindings(apiFindings, piiFindings) {
     const snippet = item.matched.length > 22 ? `${item.matched.slice(0, 22)}...` : item.matched;
     const row = document.createElement("div");
     row.className = "finding-item";
-    row.textContent = `${item.type === "api_key" ? "API key" : "PII"} | ${item.label} | "${snippet}"`;
+    const kind = item.type === "api_key" ? "API key" : "PII";
+    const lineNumber = item.lineNumber ?? "?";
+    const colNumber = item.colNumber ?? "?";
+    row.textContent = `${kind} | ${item.label} | line ${lineNumber}:${colNumber} | "${snippet}"`;
     findingsList.appendChild(row);
   }
 }
 
-function pruneApiKeysStep(text) {
-  const findings = detectMatches(text, apiKeyPatterns, "api_key");
-  const redacted = redactText(text, findings);
+function makeDetectAndRedactStep({ enabledEl, patterns, type }) {
+  // A pipeline step is: detect -> redact -> return {text, findings}
   return {
-    text: redacted,
-    findings,
-  };
-}
-
-function redactPiiStep(text) {
-  const findings = detectMatches(text, piiPatterns, "pii");
-  const redacted = redactText(text, findings);
-  return {
-    text: redacted,
-    findings,
+    enabled: () => !!enabledEl.checked,
+    run: (text) => {
+      const lineStarts = buildLineStarts(text);
+      const findings = detectMatches(text, patterns, type);
+      // Attach line/col information based on the text used for detection in this step.
+      const enrichedFindings = findings.map((f) => {
+        const { lineNumber, colNumber } = indexToLineCol(lineStarts, f.start);
+        return { ...f, lineNumber, colNumber };
+      });
+      const redacted = redactText(text, findings);
+      return { text: redacted, findings: enrichedFindings };
+    }
   };
 }
 
@@ -139,18 +170,18 @@ function processPrompt() {
   const input = promptInput.value || "";
   const redactedFindings = [];
 
-  // Pipeline design: add more steps later (e.g., "optimize") without changing UI wiring.
+  // Pipeline design: add more steps later (e.g., optimize) by registering steps here.
   const steps = [
-    {
-      enabled: () => !!pruneApiKeysToggle.checked,
-      run: pruneApiKeysStep,
-    },
-    {
-      enabled: () => !!redactPiiToggle.checked,
-      run: redactPiiStep,
-    }
-    // Future step placeholder:
-    // { enabled: () => ..., run: optimizeStep }
+    makeDetectAndRedactStep({
+      enabledEl: pruneApiKeysToggle,
+      patterns: apiKeyPatterns,
+      type: "api_key",
+    }),
+    makeDetectAndRedactStep({
+      enabledEl: redactPiiToggle,
+      patterns: piiPatterns,
+      type: "pii",
+    }),
   ];
 
   let result = input;
@@ -169,7 +200,7 @@ function processPrompt() {
   findingsCount.textContent = String(allFindings.length);
   charsMetric.textContent = `${input.length} -> ${result.length}`;
   tokensMetric.textContent = `${estimateTokens(input)} -> ${estimateTokens(result)}`;
-  summarizeFindings(apiFindings, piiFindings);
+  renderFindings(apiFindings, piiFindings);
 }
 
 processBtn.addEventListener("click", processPrompt);
