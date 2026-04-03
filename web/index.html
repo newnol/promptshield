@@ -41,6 +41,7 @@
                 Upload
                 <input id="fileInput" type="file" class="sr-only" accept=".txt,.md,.json,.csv,.py,.js,.ts,.yaml,.yml,.log,text/plain">
               </label>
+              <button type="button" id="sampleBtn" class="btn-ghost">Sample</button>
               <button type="button" id="pasteBtn" class="btn-ghost">Paste</button>
             </div>
           </div>
@@ -132,6 +133,7 @@
             <button type="button" id="copyPromptBtn" class="link-button">Copy Prompt</button>
           </div>
           <p class="prompt-lead">Extract the useful error blocks, trim noise, redact secrets, and turn the log into a prompt an AI can actually reason about.</p>
+          <div id="promptInsightBar" class="prompt-insight-bar" aria-live="polite"></div>
           <div class="prompt-controls">
             <label class="prompt-control">
               <span>Prompt style</span>
@@ -157,6 +159,10 @@
                 <option value="json">JSON</option>
               </select>
             </label>
+          </div>
+          <div class="prompt-actions-row">
+            <button type="button" id="autoTuneBtn" class="btn-secondary">Auto tune from log</button>
+            <span class="prompt-action-hint">Use this when you paste a new stack trace or container log.</span>
           </div>
           <div class="prompt-summary" id="promptSummary">Paste a log and hit <strong>Build AI Prompt</strong>.</div>
           <pre id="promptOutput" class="mono-pre-inner prompt-output"></pre>

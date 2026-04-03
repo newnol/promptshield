@@ -27,12 +27,21 @@ const DIFF_PLACEHOLDER =
   'Run “Sanitize Content” to compare original and sanitized side by side.\n\nYour text stays in this browser.';
 const PROMPT_PLACEHOLDER =
   'Paste a log, then click “Build AI Prompt” to turn it into a compact prompt for debugging.';
+const SAMPLE_LOG = `2026-04-03T06:31:12Z app[web.1]: Starting request batch
+2026-04-03T06:31:13Z app[web.1]: ERROR Failed to connect to postgres: connection refused
+2026-04-03T06:31:13Z app[web.1]: Caused by: dial tcp 10.0.2.15:5432: connect: connection refused
+2026-04-03T06:31:13Z app[web.1]: Stacktrace:
+2026-04-03T06:31:13Z app[web.1]:   at db/client.ts:42
+2026-04-03T06:31:13Z app[web.1]:   at service/bootstrap.ts:18
+2026-04-03T06:31:13Z app[web.1]: Authorization: Bearer sk-proj-fake-demo-token-000000000000
+2026-04-03T06:31:14Z app[web.1]: pod restarted by kubelet`;
 
 const promptInput = document.getElementById('promptInput');
 const processBtn = document.getElementById('processBtn');
 const clearBtn = document.getElementById('clearBtn');
 const copySanitizedBtn = document.getElementById('copySanitizedBtn');
 const fileInput = document.getElementById('fileInput');
+const sampleBtn = document.getElementById('sampleBtn');
 const findingsCount = document.getElementById('findingsCount');
 const charsMetric = document.getElementById('charsMetric');
 const tokensMetric = document.getElementById('tokensMetric');
@@ -72,8 +81,10 @@ const contextLinesInput = document.getElementById('contextLinesInput');
 const maxBlocksInput = document.getElementById('maxBlocksInput');
 const promptFormatSelect = document.getElementById('promptFormatSelect');
 const promptSummary = document.getElementById('promptSummary');
+const promptInsightBar = document.getElementById('promptInsightBar');
 const promptOutput = document.getElementById('promptOutput');
 const buildPromptBtn = document.getElementById('buildPromptBtn');
+const autoTuneBtn = document.getElementById('autoTuneBtn');
 const copyPromptBtn = document.getElementById('copyPromptBtn');
 
 let lastOriginal = '';
@@ -397,6 +408,7 @@ function setPromptPlaceholder() {
   lastPromptAnalysis = null;
   promptSummary.innerHTML = 'Paste a log and hit <strong>Build AI Prompt</strong>.';
   promptOutput.textContent = PROMPT_PLACEHOLDER;
+  renderPromptInsights(detectPromptProfile(''), false);
 }
 
 function setupDiffScrollSync() {
@@ -584,6 +596,102 @@ function extractEnvironmentHints(text) {
   }
 
   return hints;
+}
+
+function detectPromptProfile(text) {
+  const envHints = extractEnvironmentHints(text);
+  const lower = text.toLowerCase();
+  const signals = [];
+  let mode = 'debug';
+  let contextLines = 3;
+  let maxBlocks = 4;
+
+  const addSignal = (label) => {
+    if (!signals.includes(label)) signals.push(label);
+  };
+
+  if (/traceback \(most recent call last\)|caused by|exception|uncaught|stacktrace|stack trace/i.test(text)) {
+    addSignal('stack trace');
+    contextLines = 4;
+    maxBlocks = 5;
+  }
+  if (/panic|fatal error|segmentation fault|out of memory|oom/i.test(text)) {
+    addSignal('crash');
+    contextLines = 5;
+    maxBlocks = 4;
+  }
+  if (/connection refused|timeout|timed out|502|503|504|bad gateway|dns|tls|ssl/i.test(lower)) {
+    addSignal('network / transport');
+    mode = 'bug';
+  }
+  if (/kubernetes|k8s|pod|container|docker/i.test(lower)) {
+    addSignal('container / k8s');
+  }
+  if (/migration|sql|postgres|mysql|sqlite|redis|mongo/i.test(lower)) {
+    addSignal('data / datastore');
+    mode = mode === 'debug' ? 'summary' : mode;
+  }
+  if (/build failed|compile error|module not found|import error|syntaxerror/i.test(lower)) {
+    addSignal('build / compile');
+    mode = 'debug';
+    contextLines = 4;
+  }
+
+  const confidenceScore = signals.length + envHints.length;
+  const confidence = confidenceScore >= 4 ? 'high' : confidenceScore >= 2 ? 'medium' : 'low';
+
+  return {
+    mode,
+    contextLines,
+    maxBlocks,
+    signals,
+    envHints,
+    confidence,
+    title:
+      signals[0] === 'stack trace'
+        ? 'Traceback detected'
+        : signals[0] === 'crash'
+          ? 'Crash-style failure'
+          : signals[0] === 'network / transport'
+            ? 'Network failure'
+            : 'General log analysis',
+  };
+}
+
+function renderPromptInsights(profile, hasInput) {
+  if (!hasInput) {
+    promptInsightBar.innerHTML = '<span class="prompt-pill prompt-pill-muted">Waiting for a log</span>';
+    return;
+  }
+
+  const items = [
+    `<span class="prompt-pill prompt-pill-strong">${escapeHtml(profile.title)}</span>`,
+    `<span class="prompt-pill">Mode: ${escapeHtml(profile.mode)}</span>`,
+    `<span class="prompt-pill">Context: ${profile.contextLines} lines</span>`,
+    `<span class="prompt-pill">Blocks: ${profile.maxBlocks}</span>`,
+    `<span class="prompt-pill prompt-pill-${profile.confidence}">Confidence: ${escapeHtml(profile.confidence)}</span>`,
+  ];
+
+  if (profile.signals.length) {
+    items.push(`<span class="prompt-pill">Signals: ${escapeHtml(profile.signals.join(' · '))}</span>`);
+  }
+  if (profile.envHints.length) {
+    items.push(`<span class="prompt-pill">Env: ${escapeHtml(profile.envHints.join(' · '))}</span>`);
+  }
+
+  promptInsightBar.innerHTML = items.join('');
+}
+
+function applyPromptProfile(profile) {
+  promptModeSelect.value = profile.mode;
+  contextLinesInput.value = String(profile.contextLines);
+  maxBlocksInput.value = String(profile.maxBlocks);
+  renderPromptInsights(profile, !!(promptInput.value || '').trim());
+}
+
+function refreshPromptInsights() {
+  const input = promptInput.value || '';
+  renderPromptInsights(detectPromptProfile(input), !!input.trim());
 }
 
 function findRelevantWindows(text, contextLines, maxBlocks) {
@@ -834,8 +942,31 @@ function buildAndRenderPrompt() {
   renderPromptOutput(result);
 }
 
+function applyAutoTuneAndBuild() {
+  const input = promptInput.value || '';
+  if (!input.trim()) {
+    setPromptPlaceholder();
+    return;
+  }
+  const profile = detectPromptProfile(input);
+  applyPromptProfile(profile);
+  buildAndRenderPrompt();
+}
+
+function loadSampleLog() {
+  promptInput.value = SAMPLE_LOG;
+  updateInputMeta();
+  refreshPromptInsights();
+  setTab('diff');
+}
+
 processBtn.addEventListener('click', () => processPrompt());
 buildPromptBtn.addEventListener('click', () => buildAndRenderPrompt());
+autoTuneBtn.addEventListener('click', () => applyAutoTuneAndBuild());
+sampleBtn.addEventListener('click', () => {
+  loadSampleLog();
+  applyAutoTuneAndBuild();
+});
 
 clearBtn.addEventListener('click', () => {
   promptInput.value = '';
@@ -925,12 +1056,16 @@ pasteBtn.addEventListener('click', async () => {
     const text = await navigator.clipboard.readText();
     promptInput.value = text;
     updateInputMeta();
+    refreshPromptInsights();
   } catch (err) {
     console.error('Clipboard read error:', err);
   }
 });
 
-promptInput.addEventListener('input', updateInputMeta);
+promptInput.addEventListener('input', () => {
+  updateInputMeta();
+  refreshPromptInsights();
+});
 
 fileInput.addEventListener('change', (event) => {
   const file = event.target.files && event.target.files[0];
@@ -939,6 +1074,7 @@ fileInput.addEventListener('change', (event) => {
   reader.onload = () => {
     promptInput.value = String(reader.result || '');
     updateInputMeta();
+    refreshPromptInsights();
   };
   reader.readAsText(file);
 });
@@ -953,6 +1089,7 @@ async function initApp() {
     processBtn.disabled = false;
     processBtn.textContent = 'Sanitize Content';
     updateInputMeta();
+    refreshPromptInsights();
   } catch (err) {
     console.error('Failed to initialize API key patterns:', err);
     processBtn.textContent = 'Rules load failed';
