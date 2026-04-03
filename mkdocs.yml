@@ -1,0 +1,54 @@
+site_name: PromptShield
+site_description: Open-source tool to redact sensitive data and compress prompts
+site_author: PromptShield Contributors
+site_url: https://promptshield.dev
+repo_url: https://github.com/newnol/promptshield
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/github
+  colors:
+    primary: indigo
+    accent: purple
+  features:
+    - content.code.copy
+    - content.code.select
+    - navigation.tabs
+    - navigation.top
+    - search.highlight
+    - search.share
+
+nav:
+  - Home: index.md
+  - Getting Started:
+    - Installation: installation.md
+    - Quick Start: quickstart.md
+    - Features: features.md
+  - Documentation:
+    - CLI Reference: cli.md
+    - Python API: api.md
+    - Configuration: configuration.md
+  - Examples: examples.md
+  - Contributing: CONTRIBUTING.md
+  - Roadmap: roadmap.md
+  - FAQ: faq.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          paths: [src]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.highlight
+  - toc:
+      permalink: true

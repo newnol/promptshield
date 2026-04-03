@@ -1,0 +1,37 @@
+# PromptShield Default Detection Patterns
+# Override by creating ~/.promptshield/patterns.yaml
+
+patterns:
+  api_keys:
+    openai:
+      - prefix: "sk-"
+        min_length: 40
+    aws:
+      - prefix: "AKIA"
+      - prefix: "ASIA"
+    google:
+      - prefix: "AIza"
+    stripe:
+      - prefix: "sk_live_"
+      - prefix: "rk_live_"
+    github:
+      - prefix: "ghp_"
+  
+  pii:
+    ssn:
+      enabled: true
+      pattern: '\d{3}-\d{2}-\d{4}'
+    credit_card:
+      enabled: true
+      pattern: '\b\d{13,16}\b'
+    email:
+      enabled: true
+      pattern: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+'
+    phone:
+      enabled: true
+      pattern: '\+?1?\s?[-.\s]?\(?[0-9]{3}\)?'
+
+compression:
+  markdown_stripping: true
+  whitespace_cleaning: true
+  filler_removal: true
