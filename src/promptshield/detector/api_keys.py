@@ -10,8 +10,10 @@ Detects common API key formats from:
 - Anthropic (sk-ant-)
 """
 
+import json
 import re
-from typing import Dict, List, NamedTuple
+from pathlib import Path
+from typing import Dict, List, NamedTuple, Tuple
 
 class APIKeyMatch(NamedTuple):
     """Result of an API key detection."""
@@ -22,46 +24,44 @@ class APIKeyMatch(NamedTuple):
 
 class APIKeyDetector:
     """Detect common API key patterns."""
-    
-    # Provider-specific patterns (prefix + length hints)
-    PATTERNS = {
-        "openai": [
-            (r"sk-proj-[a-zA-Z0-9\-_]{32,}", "OpenAI Project Key"),
-            (r"sk-[a-zA-Z0-9]{48,}", "OpenAI API Key"),
-        ],
-        "aws": [
-            (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
-            (r"ASIA[0-9A-Z]{16}", "AWS Temporary Access Key"),
-        ],
-        "google": [
-            (r"AIza[0-9A-Za-z\-_]{35}", "Google API Key"),
-        ],
-        "stripe": [
-            (r"sk_live_[a-zA-Z0-9]{24,}", "Stripe Live Secret"),
-            (r"rk_live_[a-zA-Z0-9]{24,}", "Stripe Live Restricted"),
-            (r"pk_live_[a-zA-Z0-9]{24,}", "Stripe Live Public"),
-        ],
-        "github": [
-            (r"ghp_[a-zA-Z0-9]{36,255}", "GitHub Personal Access Token"),
-            (r"ghu_[a-zA-Z0-9]{36,255}", "GitHub OAuth Token"),
-            (r"ghs_[a-zA-Z0-9]{36,255}", "GitHub Server-to-Server Token"),
-            (r"gho_[a-zA-Z0-9]{36,255}", "GitHub OAuth App Token"),
-        ],
-        "anthropic": [
-            (r"sk-ant-[a-zA-Z0-9\-_]{32,}", "Anthropic API Key"),
-        ],
-        "huggingface": [
-            (r"hf_[a-zA-Z0-9]{34,}", "Hugging Face Token"),
-        ],
-    }
-    
+
+    RULES_FILE = Path(__file__).with_name("api_key_rules.json")
+
     def __init__(self):
         """Compile regex patterns for efficiency."""
+        self.patterns = self._load_patterns()
         self.compiled = {}
-        for provider, patterns in self.PATTERNS.items():
+        for provider, patterns in self.patterns.items():
             self.compiled[provider] = [
                 (re.compile(regex), label) for regex, label in patterns
             ]
+
+    def _load_patterns(self) -> Dict[str, List[Tuple[str, str]]]:
+        """
+        Load API key rules from JSON for easy provider extension.
+
+        Expected JSON format:
+        {
+          "provider_name": [{"regex": "...", "label": "..."}]
+        }
+        """
+        with open(self.RULES_FILE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+
+        patterns: Dict[str, List[Tuple[str, str]]] = {}
+        for provider, provider_rules in data.items():
+            parsed_rules = []
+            for rule in provider_rules:
+                regex = rule.get("regex")
+                label = rule.get("label", provider)
+                if not regex:
+                    continue
+                parsed_rules.append((regex, label))
+
+            if parsed_rules:
+                patterns[provider] = parsed_rules
+
+        return patterns
     
     def detect(self, text: str) -> List[APIKeyMatch]:
         """

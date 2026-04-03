@@ -1,0 +1,72 @@
+{
+  "openai": [
+    {
+      "regex": "sk-proj-[a-zA-Z0-9\\-_]{32,}",
+      "label": "OpenAI Project Key"
+    },
+    {
+      "regex": "sk-[a-zA-Z0-9]{48,}",
+      "label": "OpenAI API Key"
+    }
+  ],
+  "aws": [
+    {
+      "regex": "AKIA[0-9A-Z]{16}",
+      "label": "AWS Access Key"
+    },
+    {
+      "regex": "ASIA[0-9A-Z]{16}",
+      "label": "AWS Temporary Access Key"
+    }
+  ],
+  "google": [
+    {
+      "regex": "AIza[0-9A-Za-z\\-_]{35}",
+      "label": "Google API Key"
+    }
+  ],
+  "stripe": [
+    {
+      "regex": "sk_live_[a-zA-Z0-9]{24,}",
+      "label": "Stripe Live Secret"
+    },
+    {
+      "regex": "rk_live_[a-zA-Z0-9]{24,}",
+      "label": "Stripe Live Restricted"
+    },
+    {
+      "regex": "pk_live_[a-zA-Z0-9]{24,}",
+      "label": "Stripe Live Public"
+    }
+  ],
+  "github": [
+    {
+      "regex": "ghp_[a-zA-Z0-9]{36,255}",
+      "label": "GitHub Personal Access Token"
+    },
+    {
+      "regex": "ghu_[a-zA-Z0-9]{36,255}",
+      "label": "GitHub OAuth Token"
+    },
+    {
+      "regex": "ghs_[a-zA-Z0-9]{36,255}",
+      "label": "GitHub Server-to-Server Token"
+    },
+    {
+      "regex": "gho_[a-zA-Z0-9]{36,255}",
+      "label": "GitHub OAuth App Token"
+    }
+  ],
+  "anthropic": [
+    {
+      "regex": "sk-ant-[a-zA-Z0-9\\-_]{32,}",
+      "label": "Anthropic API Key"
+    }
+  ],
+  "huggingface": [
+    {
+      "regex": "hf_[a-zA-Z0-9]{34,}",
+      "label": "Hugging Face Token"
+    }
+  ]
+}

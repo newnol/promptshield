@@ -93,8 +93,8 @@ Then [open a PR on GitHub](https://github.com/newnol/promptshield/pulls) with:
 
 ### High Priority
 1. **API Key Patterns** — Add detection for new providers
-   - File: `src/promptshield/detector/api_keys.py`
-   - Add to `PATTERNS` dict
+   - File: `src/promptshield/detector/api_key_rules.json`
+   - Add a new provider entry with one or more `{regex, label}` rules
    - Add test in `tests/test_detector.py`
 
 2. **PII Detection Improvements**
