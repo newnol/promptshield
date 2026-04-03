@@ -54,22 +54,68 @@
           </div>
         </section>
 
-        <section class="card">
-          <h2 class="section-title">Report</h2>
-          <div id="metrics" class="metrics">
-            <div>Total findings: <strong id="findingsCount">0</strong></div>
-            <div>Chars: <strong id="charsMetric">0 &rarr; 0</strong></div>
-            <div>Tokens (estimated): <strong id="tokensMetric">0 &rarr; 0</strong></div>
+        <section class="card results-card" aria-label="Sanitize results">
+          <div class="results-header">
+            <div class="tabs" role="tablist" aria-label="Compare views">
+              <button type="button" class="tab is-active" role="tab" id="tabBtnDiff" aria-selected="true" aria-controls="panelDiff" data-tab="diff">Diff View</button>
+              <button type="button" class="tab" role="tab" id="tabBtnOriginal" aria-selected="false" aria-controls="panelOriginal" data-tab="original">Original</button>
+              <button type="button" class="tab" role="tab" id="tabBtnSanitized" aria-selected="false" aria-controls="panelSanitized" data-tab="sanitized">Sanitized</button>
+            </div>
+            <button type="button" id="copySanitizedBtn" class="btn-copy-sanitized">Copy Sanitized</button>
           </div>
-          <div id="findingsList" class="findings"></div>
+
+          <div class="results-body">
+            <div id="panelDiff" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnDiff">
+              <div class="diff-grid">
+                <div class="diff-col">
+                  <div class="col-label">Original Content</div>
+                  <pre id="diffOriginal" class="mono-pre" aria-label="Original text"></pre>
+                </div>
+                <div class="diff-vsep" aria-hidden="true"></div>
+                <div class="diff-col">
+                  <div class="col-label">Sanitized Output</div>
+                  <pre id="diffSanitized" class="mono-pre" aria-label="Sanitized text"></pre>
+                </div>
+              </div>
+            </div>
+
+            <div id="panelOriginal" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnOriginal" hidden>
+              <pre id="fullOriginal" class="mono-pre mono-pre-tall"></pre>
+            </div>
+
+            <div id="panelSanitized" class="tab-panel" role="tabpanel" aria-labelledby="tabBtnSanitized" hidden>
+              <pre id="fullSanitized" class="mono-pre mono-pre-tall"></pre>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat">
+              <span class="stat-ico stat-ico-danger" aria-hidden="true">&#9888;</span>
+              <span class="stat-text"><strong id="statApiCount">0</strong> Secrets detected</span>
+            </div>
+            <div class="stat">
+              <span class="stat-ico stat-ico-pii" aria-hidden="true">&#9675;</span>
+              <span class="stat-text"><strong id="statPiiCount">0</strong> PII redacted</span>
+            </div>
+            <div class="stat">
+              <span class="stat-ico stat-ico-ok" aria-hidden="true">&#10003;</span>
+              <span class="stat-text" id="statDone">Done</span>
+            </div>
+          </div>
+          <div class="metrics-inline">
+            <span>Chars: <strong id="charsMetric">0 &rarr; 0</strong></span>
+            <span>Tokens (est.): <strong id="tokensMetric">0 &rarr; 0</strong></span>
+            <span>Total findings: <strong id="findingsCount">0</strong></span>
+          </div>
         </section>
 
-        <section class="card card-output">
-          <div class="row space-between">
-            <h2 class="section-title">Output</h2>
-            <button id="copyBtn" type="button" class="btn-secondary">Copy output</button>
+        <section class="card findings-detailed-card">
+          <div class="findings-head">
+            <h2 class="section-title">Detailed Findings</h2>
+            <button type="button" id="exportJsonBtn" class="link-button">Export JSON</button>
           </div>
-          <textarea id="outputText" rows="12" readonly placeholder="Sanitized text will appear here…"></textarea>
+          <div id="findingsList" class="findings findings-stacked"></div>
+          <button type="button" id="copyFindingsReportBtn" class="btn-secondary btn-findings-copy">Copy Findings Report</button>
         </section>
       </div>
 

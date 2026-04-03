@@ -10,16 +10,36 @@ const piiPatterns = {
   iban: [/\b[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}\b/g]
 };
 
+const DIFF_PLACEHOLDER =
+  "Run “Sanitize Content” to compare original and sanitized side by side.\n\nYour text stays in this browser.";
+
 const promptInput = document.getElementById("promptInput");
-const outputText = document.getElementById("outputText");
 const processBtn = document.getElementById("processBtn");
 const clearBtn = document.getElementById("clearBtn");
-const copyBtn = document.getElementById("copyBtn");
+const copySanitizedBtn = document.getElementById("copySanitizedBtn");
 const fileInput = document.getElementById("fileInput");
 const findingsCount = document.getElementById("findingsCount");
 const charsMetric = document.getElementById("charsMetric");
 const tokensMetric = document.getElementById("tokensMetric");
 const findingsList = document.getElementById("findingsList");
+const statApiCount = document.getElementById("statApiCount");
+const statPiiCount = document.getElementById("statPiiCount");
+const statDone = document.getElementById("statDone");
+
+const diffOriginal = document.getElementById("diffOriginal");
+const diffSanitized = document.getElementById("diffSanitized");
+const fullOriginal = document.getElementById("fullOriginal");
+const fullSanitized = document.getElementById("fullSanitized");
+
+const tabBtnDiff = document.getElementById("tabBtnDiff");
+const tabBtnOriginal = document.getElementById("tabBtnOriginal");
+const tabBtnSanitized = document.getElementById("tabBtnSanitized");
+const panelDiff = document.getElementById("panelDiff");
+const panelOriginal = document.getElementById("panelOriginal");
+const panelSanitized = document.getElementById("panelSanitized");
+
+const exportJsonBtn = document.getElementById("exportJsonBtn");
+const copyFindingsReportBtn = document.getElementById("copyFindingsReportBtn");
 
 const pruneApiKeysToggle = document.getElementById("pruneApiKeysToggle");
 const redactPiiToggle = document.getElementById("redactPiiToggle");
@@ -28,6 +48,10 @@ const pasteBtn = document.getElementById("pasteBtn");
 const inputLineCount = document.getElementById("inputLineCount");
 const inputCharCount = document.getElementById("inputCharCount");
 const auditPanel = document.getElementById("auditPanel");
+
+let lastOriginal = "";
+let lastSanitized = "";
+let lastExportFindings = [];
 
 const AUDIT_IDLE_HTML = `
   <div class="audit-placeholder">
@@ -47,7 +71,7 @@ function getApiKeyPatternsForRun() {
 
 function updateInputMeta() {
   const text = promptInput.value || "";
-  const lines = text ? text.split(/\n/).length : 0;
+  const lines = text ? text.split("\n").length : 0;
   inputLineCount.textContent = String(lines);
   inputCharCount.textContent = String(text.length);
 }
@@ -68,8 +92,39 @@ function setAuditAfterRun(total, apiCount, piiCount) {
   `;
 }
 
+function setTab(name) {
+  const map = [
+    { id: "diff", panel: panelDiff, btn: tabBtnDiff },
+    { id: "original", panel: panelOriginal, btn: tabBtnOriginal },
+    { id: "sanitized", panel: panelSanitized, btn: tabBtnSanitized },
+  ];
+  for (const { id, panel, btn } of map) {
+    const on = id === name;
+    panel.hidden = !on;
+    btn.classList.toggle("is-active", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  }
+}
+
+function setResultsViews(input, result) {
+  lastOriginal = input;
+  lastSanitized = result;
+  diffOriginal.textContent = input || "";
+  diffSanitized.textContent = result;
+  fullOriginal.textContent = input;
+  fullSanitized.textContent = result;
+}
+
+function setDiffPlaceholder() {
+  lastOriginal = "";
+  lastSanitized = "";
+  diffOriginal.textContent = DIFF_PLACEHOLDER;
+  diffSanitized.textContent = "";
+  fullOriginal.textContent = "";
+  fullSanitized.textContent = "";
+}
+
 function buildLineStarts(text) {
-  // lineStarts[i] = index in `text` where line (i+1) starts (0-based).
   const lineStarts = [0];
   for (let i = 0; i < text.length; i++) {
     if (text[i] === "\n") lineStarts.push(i + 1);
@@ -78,7 +133,6 @@ function buildLineStarts(text) {
 }
 
 function indexToLineCol(lineStarts, index) {
-  // Binary search for last lineStart <= index.
   let low = 0;
   let high = lineStarts.length - 1;
   let lineIdx = 0;
@@ -91,8 +145,8 @@ function indexToLineCol(lineStarts, index) {
       high = mid - 1;
     }
   }
-  const lineNumber = lineIdx + 1; // 1-based for users
-  const colNumber = index - lineStarts[lineIdx] + 1; // 1-based
+  const lineNumber = lineIdx + 1;
+  const colNumber = index - lineStarts[lineIdx] + 1;
   return { lineNumber, colNumber };
 }
 
@@ -107,7 +161,6 @@ function compileApiKeyPatternsFromRules(rules) {
     for (const rule of providerRules || []) {
       if (!rule || !rule.regex) continue;
       try {
-        // Keep generic labeled-secret pattern case-insensitive.
         const flags = provider === "generic" ? "gi" : "g";
         patterns.push(new RegExp(rule.regex, flags));
       } catch (err) {
@@ -183,7 +236,6 @@ function redactText(text, findings) {
 }
 
 function estimateTokens(text) {
-  // Fast approximation for UI feedback in browser-only mode.
   const words = text.trim() ? text.trim().split(/\s+/).length : 0;
   const chars = text.length;
   return Math.max(0, Math.round(words * 1.3 + chars / 20));
@@ -198,25 +250,36 @@ function renderFindings(apiFindings, piiFindings) {
   }
 
   for (const item of all.slice(0, 50)) {
-    const snippet = item.matched.length > 22 ? `${item.matched.slice(0, 22)}...` : item.matched;
+    const snippet = item.matched.length > 80 ? `${item.matched.slice(0, 80)}…` : item.matched;
     const row = document.createElement("div");
-    row.className = "finding-item";
-    const kind = item.type === "api_key" ? "API key" : "PII";
-    const lineNumber = item.lineNumber ?? "?";
-    const colNumber = item.colNumber ?? "?";
-    row.textContent = `${kind} | ${item.label} | line ${lineNumber}:${colNumber} | "${snippet}"`;
+    row.className = "finding-card";
+    const isApi = item.type === "api_key";
+    row.innerHTML = `
+      <div class="finding-card-top">
+        <span class="finding-badge ${isApi ? "finding-badge-api" : "finding-badge-pii"}">${isApi ? "API" : "PII"}</span>
+        <span class="finding-line">Line ${item.lineNumber ?? "?"}:${item.colNumber ?? "?"}</span>
+      </div>
+      <div class="finding-label">${escapeHtml(String(item.label))}</div>
+      <pre class="finding-snippet">${escapeHtml(snippet)}</pre>
+    `;
     findingsList.appendChild(row);
   }
 }
 
+function escapeHtml(s) {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function makeDetectAndRedactStep({ enabledEl, patterns, type }) {
-  // A pipeline step is: detect -> redact -> return {text, findings}
   return {
     enabled: () => !!enabledEl.checked,
     run: (text) => {
       const lineStarts = buildLineStarts(text);
       const findings = detectMatches(text, patterns, type);
-      // Attach line/col information based on the text used for detection in this step.
       const enrichedFindings = findings.map((f) => {
         const { lineNumber, colNumber } = indexToLineCol(lineStarts, f.start);
         return { ...f, lineNumber, colNumber };
@@ -231,7 +294,6 @@ function processPrompt() {
   const input = promptInput.value || "";
   const redactedFindings = [];
 
-  // Pipeline design: add more steps later (e.g., optimize) by registering steps here.
   const steps = [
     makeDetectAndRedactStep({
       enabledEl: pruneApiKeysToggle,
@@ -257,43 +319,98 @@ function processPrompt() {
   const piiFindings = redactedFindings.filter((f) => f.type === "pii");
   const allFindings = redactedFindings.sort((a, b) => a.start - b.start);
 
-  outputText.value = result;
+  lastExportFindings = allFindings.map(({ type, label, start, end, matched, lineNumber, colNumber }) => ({
+    type,
+    label,
+    start,
+    end,
+    matched,
+    lineNumber,
+    colNumber,
+  }));
+
+  setResultsViews(input, result);
   findingsCount.textContent = String(allFindings.length);
   charsMetric.textContent = `${input.length} → ${result.length}`;
   tokensMetric.textContent = `${estimateTokens(input)} → ${estimateTokens(result)}`;
+  statApiCount.textContent = String(apiFindings.length);
+  statPiiCount.textContent = String(piiFindings.length);
+  if (!allFindings.length && input === result) {
+    statDone.textContent = "No sensitive data detected";
+  } else {
+    statDone.textContent = "Done";
+  }
+
   renderFindings(apiFindings, piiFindings);
   setAuditAfterRun(allFindings.length, apiFindings.length, piiFindings.length);
+  setTab("diff");
 }
 
 processBtn.addEventListener("click", processPrompt);
 
 clearBtn.addEventListener("click", () => {
   promptInput.value = "";
-  outputText.value = "";
   findingsCount.textContent = "0";
   charsMetric.textContent = "0 → 0";
   tokensMetric.textContent = "0 → 0";
+  statApiCount.textContent = "0";
+  statPiiCount.textContent = "0";
+  statDone.textContent = "Done";
   findingsList.innerHTML = "";
+  lastExportFindings = [];
   fileInput.value = "";
   pruneApiKeysToggle.checked = true;
   redactPiiToggle.checked = false;
   genericSecretsToggle.checked = false;
   updateInputMeta();
+  setDiffPlaceholder();
   setAuditIdle();
+  setTab("diff");
 });
 
-copyBtn.addEventListener("click", async () => {
-  const value = outputText.value;
-  if (!value) return;
+copySanitizedBtn.addEventListener("click", async () => {
+  if (!lastSanitized) return;
   try {
-    await navigator.clipboard.writeText(value);
-    copyBtn.textContent = "Copied";
+    await navigator.clipboard.writeText(lastSanitized);
+    copySanitizedBtn.textContent = "Copied";
     setTimeout(() => {
-      copyBtn.textContent = "Copy output";
+      copySanitizedBtn.textContent = "Copy Sanitized";
     }, 1200);
   } catch (err) {
     console.error("Clipboard error:", err);
   }
+});
+
+exportJsonBtn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(lastExportFindings, null, 2));
+    exportJsonBtn.textContent = "Copied";
+    setTimeout(() => {
+      exportJsonBtn.textContent = "Export JSON";
+    }, 1200);
+  } catch (err) {
+    console.error("Clipboard error:", err);
+  }
+});
+
+copyFindingsReportBtn.addEventListener("click", async () => {
+  const lines = lastExportFindings.map(
+    (f) => `[${f.type}] ${f.label} L${f.lineNumber}: ${f.matched}`
+  );
+  const text = lines.join("\n");
+  try {
+    await navigator.clipboard.writeText(text || "(no findings)");
+    copyFindingsReportBtn.textContent = "Copied";
+    setTimeout(() => {
+      copyFindingsReportBtn.textContent = "Copy Findings Report";
+    }, 1200);
+  } catch (err) {
+    console.error("Clipboard error:", err);
+  }
+});
+
+[[tabBtnDiff, "diff"], [tabBtnOriginal, "original"], [tabBtnSanitized, "sanitized"]].forEach(([btn, name]) => {
+  btn.addEventListener("click", () => setTab(name));
 });
 
 pasteBtn.addEventListener("click", async () => {
@@ -322,6 +439,7 @@ fileInput.addEventListener("change", (event) => {
 async function initApp() {
   processBtn.disabled = true;
   processBtn.textContent = "Loading rules...";
+  setDiffPlaceholder();
   try {
     await loadApiKeyPatterns();
     processBtn.disabled = false;
