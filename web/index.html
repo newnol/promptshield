@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PromptShield Web MVP</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="container">
+    <h1>PromptShield Web MVP</h1>
+    <p class="subtitle">Client-only prompt sanitization (API key pruning + optional PII). No server calls.</p>
+
+    <section class="card">
+      <label for="promptInput">Input prompt</label>
+      <textarea id="promptInput" rows="12" placeholder="Paste your prompt here..."></textarea>
+      <div class="row">
+        <input id="fileInput" type="file" accept=".txt,.md,.json,.csv,.py,.js,.ts,.yaml,.yml,.log,text/plain">
+        <button id="processBtn" type="button">Process</button>
+        <button id="clearBtn" type="button" class="secondary">Clear</button>
+      </div>
+      <div class="row toggles">
+        <label><input id="pruneApiKeysToggle" type="checkbox" checked> Prune API keys</label>
+        <label><input id="redactPiiToggle" type="checkbox"> Redact PII (optional)</label>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Report</h2>
+      <div id="metrics" class="metrics">
+        <div>Total findings: <strong id="findingsCount">0</strong></div>
+        <div>Chars: <strong id="charsMetric">0 -> 0</strong></div>
+        <div>Tokens (estimated): <strong id="tokensMetric">0 -> 0</strong></div>
+      </div>
+      <div id="findingsList" class="findings"></div>
+    </section>
+
+    <section class="card">
+      <div class="row space-between">
+        <h2>Output</h2>
+        <button id="copyBtn" type="button" class="secondary">Copy output</button>
+      </div>
+      <textarea id="outputText" rows="12" readonly placeholder="Processed prompt will appear here..."></textarea>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>

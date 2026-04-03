@@ -11,6 +11,15 @@ No cloud, no tracking, 100% local. Inspired by CleanMyPrompt but fully open, ext
 pip install promptshield
 ```
 
+### Web MVP (Client-only)
+```bash
+cd web
+python3 -m http.server 8080
+# Open http://localhost:8080
+```
+
+The web MVP runs entirely in your browser. It focuses on pruning/redacting API keys (and optional PII).
+
 ### Basic Usage
 
 #### CLI
