@@ -4,6 +4,8 @@
 
 No cloud, no tracking, 100% local. Inspired by CleanMyPrompt but fully open, extensible, and built for DevOps pipelines.
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/newnol/promptshield&root-directory=web)
+
 ## Quick Start
 
 ### Installation
