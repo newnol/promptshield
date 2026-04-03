@@ -4,7 +4,9 @@
 
 No cloud, no tracking, 100% local. Inspired by CleanMyPrompt but fully open, extensible, and built for DevOps pipelines.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/newnol/promptshield&root-directory=web)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/newnol/promptshield)
+
+**Deploy (non-technical):** click the button above, sign in with GitHub, then **Deploy**. This repo includes `vercel.json` so Vercel serves the static UI from the `web/` folder automatically—no need to pick a root directory.
 
 ## Quick Start
 
@@ -21,6 +23,11 @@ python3 -m http.server 8080
 ```
 
 The web MVP runs entirely in your browser. It focuses on pruning/redacting API keys (and optional PII).
+
+To keep web rules in sync with detector rules:
+```bash
+python3 scripts/sync_api_key_rules.py
+```
 
 ### Basic Usage
 
@@ -138,20 +145,6 @@ patterns:
     email:
       - regex: '[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
 ```
-
-## Comparison with Alternatives
-
-| Feature | PromptShield | CleanMyPrompt | Presidio | Manual |
-|---------|------------|--------------|----------|---------|
-| **Open Source** | ✅ | ❌ | ✅ | N/A |
-| **Local/Offline** | ✅ | ✅ | ✅ | ✅ |
-| **CLI** | ✅ | ❌ | ❌ | N/A |
-| **Python API** | ✅ | ❌ | ✅ | N/A |
-| **Token Compression** | ✅ | ✅ | ❌ | ❌ |
-| **Custom Patterns** | ✅ YAML | ❌ | ✅ regex | N/A |
-| **Free** | ✅ | ✅ | ✅ | ✅ |
-| **Setup** | pip install | 0 setup | Docker + Python | - |
-| **API Provider Support** | Many | 6 providers | Limited | - |
 
 ## Security & Privacy
 
