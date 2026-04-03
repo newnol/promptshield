@@ -69,8 +69,8 @@ export default function AboutScreen() {
           </Text>
           <Bullet
             icon="network-off"
-            title="No network required for scanning"
-            body="Rules are bundled; processing runs in your app runtime."
+            title="No backend for your content"
+            body="Rules are bundled with the app; scanning runs on-device in memory."
           />
           <Bullet
             icon="cellphone-off"
