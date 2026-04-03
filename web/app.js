@@ -5,7 +5,12 @@ const apiKeyPatterns = {
   stripe: [/sk_live_[a-zA-Z0-9]{24,}/g, /rk_live_[a-zA-Z0-9]{24,}/g, /pk_live_[a-zA-Z0-9]{24,}/g],
   github: [/ghp_[a-zA-Z0-9]{36,255}/g, /ghu_[a-zA-Z0-9]{36,255}/g, /ghs_[a-zA-Z0-9]{36,255}/g, /gho_[a-zA-Z0-9]{36,255}/g],
   anthropic: [/sk-ant-[a-zA-Z0-9\-_]{32,}/g],
-  huggingface: [/hf_[a-zA-Z0-9]{34,}/g]
+  huggingface: [/hf_[a-zA-Z0-9]{34,}/g],
+  telegram_bot: [/\b\d{9,11}:[a-zA-Z0-9_-]{35,}\b/g],
+  generic: [
+    /\b[A-Za-z0-9]{32,}\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}\b/g,
+    /\b(key|token|secret|api[_-]?key)[\s:=]+['"]?[A-Za-z0-9_-]{24,}['"]?/gi
+  ]
 };
 
 const piiPatterns = {
