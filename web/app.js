@@ -23,6 +23,50 @@ const findingsList = document.getElementById("findingsList");
 
 const pruneApiKeysToggle = document.getElementById("pruneApiKeysToggle");
 const redactPiiToggle = document.getElementById("redactPiiToggle");
+const genericSecretsToggle = document.getElementById("genericSecretsToggle");
+const pasteBtn = document.getElementById("pasteBtn");
+const inputLineCount = document.getElementById("inputLineCount");
+const inputCharCount = document.getElementById("inputCharCount");
+const auditPanel = document.getElementById("auditPanel");
+
+const AUDIT_IDLE_HTML = `
+  <div class="audit-placeholder">
+    <div class="audit-icon" aria-hidden="true">&#128274;</div>
+    <p class="audit-title">Awaiting input</p>
+    <p class="audit-desc">Run <strong>Sanitize Content</strong> to scan locally. Your data never leaves this browser window.</p>
+  </div>
+`;
+
+function getApiKeyPatternsForRun() {
+  const p = { ...apiKeyPatterns };
+  if (!genericSecretsToggle.checked) {
+    delete p.generic;
+  }
+  return p;
+}
+
+function updateInputMeta() {
+  const text = promptInput.value || "";
+  const lines = text ? text.split(/\n/).length : 0;
+  inputLineCount.textContent = String(lines);
+  inputCharCount.textContent = String(text.length);
+}
+
+function setAuditIdle() {
+  auditPanel.innerHTML = AUDIT_IDLE_HTML;
+}
+
+function setAuditAfterRun(total, apiCount, piiCount) {
+  auditPanel.innerHTML = `
+    <div class="audit-summary">
+      <p style="margin:0 0 0.5rem;"><strong>${total}</strong> finding${total === 1 ? "" : "s"}</p>
+      <p style="margin:0;font-size:0.78rem;line-height:1.45;">
+        API key patterns: <strong>${apiCount}</strong><br>
+        PII: <strong>${piiCount}</strong>
+      </p>
+    </div>
+  `;
+}
 
 function buildLineStarts(text) {
   // lineStarts[i] = index in `text` where line (i+1) starts (0-based).
@@ -191,7 +235,7 @@ function processPrompt() {
   const steps = [
     makeDetectAndRedactStep({
       enabledEl: pruneApiKeysToggle,
-      patterns: apiKeyPatterns,
+      patterns: getApiKeyPatternsForRun(),
       type: "api_key",
     }),
     makeDetectAndRedactStep({
@@ -215,9 +259,10 @@ function processPrompt() {
 
   outputText.value = result;
   findingsCount.textContent = String(allFindings.length);
-  charsMetric.textContent = `${input.length} -> ${result.length}`;
-  tokensMetric.textContent = `${estimateTokens(input)} -> ${estimateTokens(result)}`;
+  charsMetric.textContent = `${input.length} → ${result.length}`;
+  tokensMetric.textContent = `${estimateTokens(input)} → ${estimateTokens(result)}`;
   renderFindings(apiFindings, piiFindings);
+  setAuditAfterRun(allFindings.length, apiFindings.length, piiFindings.length);
 }
 
 processBtn.addEventListener("click", processPrompt);
@@ -226,12 +271,15 @@ clearBtn.addEventListener("click", () => {
   promptInput.value = "";
   outputText.value = "";
   findingsCount.textContent = "0";
-  charsMetric.textContent = "0 -> 0";
-  tokensMetric.textContent = "0 -> 0";
+  charsMetric.textContent = "0 → 0";
+  tokensMetric.textContent = "0 → 0";
   findingsList.innerHTML = "";
   fileInput.value = "";
   pruneApiKeysToggle.checked = true;
   redactPiiToggle.checked = false;
+  genericSecretsToggle.checked = false;
+  updateInputMeta();
+  setAuditIdle();
 });
 
 copyBtn.addEventListener("click", async () => {
@@ -248,12 +296,25 @@ copyBtn.addEventListener("click", async () => {
   }
 });
 
+pasteBtn.addEventListener("click", async () => {
+  try {
+    const text = await navigator.clipboard.readText();
+    promptInput.value = text;
+    updateInputMeta();
+  } catch (err) {
+    console.error("Clipboard read error:", err);
+  }
+});
+
+promptInput.addEventListener("input", updateInputMeta);
+
 fileInput.addEventListener("change", (event) => {
   const file = event.target.files && event.target.files[0];
   if (!file) return;
   const reader = new FileReader();
   reader.onload = () => {
     promptInput.value = String(reader.result || "");
+    updateInputMeta();
   };
   reader.readAsText(file);
 });
@@ -264,7 +325,8 @@ async function initApp() {
   try {
     await loadApiKeyPatterns();
     processBtn.disabled = false;
-    processBtn.textContent = "Process";
+    processBtn.textContent = "Sanitize Content";
+    updateInputMeta();
   } catch (err) {
     console.error("Failed to initialize API key patterns:", err);
     processBtn.textContent = "Rules load failed";

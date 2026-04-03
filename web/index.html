@@ -3,45 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PromptShield Web MVP</title>
+  <title>PromptShield</title>
+  <meta name="description" content="Client-side prompt sanitization. Scan and redact API keys and PII in your browser.">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">&#128737;</span>
+        <h1 class="brand-title">PromptShield</h1>
+        <span class="badge-local">100% Local Browser Processing</span>
+      </div>
+      <nav class="header-nav" aria-label="External links">
+        <a href="https://github.com/newnol/promptshield#readme" target="_blank" rel="noopener noreferrer">Documentation</a>
+        <a href="https://github.com/newnol/promptshield" target="_blank" rel="noopener noreferrer">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
   <main class="container">
-    <h1>PromptShield Web MVP</h1>
-    <p class="subtitle">Client-only prompt sanitization (API key pruning + optional PII). No server calls.</p>
+    <p class="page-lead">
+      Paste prompts, logs, or JSON configuration. Sanitization runs entirely in your browser — no uploads to PromptShield servers.
+    </p>
 
-    <section class="card">
-      <label for="promptInput">Input prompt</label>
-      <textarea id="promptInput" rows="12" placeholder="Paste your prompt here..."></textarea>
-      <div class="row">
-        <input id="fileInput" type="file" accept=".txt,.md,.json,.csv,.py,.js,.ts,.yaml,.yml,.log,text/plain">
-        <button id="processBtn" type="button">Process</button>
-        <button id="clearBtn" type="button" class="secondary">Clear</button>
-      </div>
-      <div class="row toggles">
-        <label><input id="pruneApiKeysToggle" type="checkbox" checked> Prune API keys</label>
-        <label><input id="redactPiiToggle" type="checkbox"> Redact PII (optional)</label>
-      </div>
-    </section>
+    <div class="workspace">
+      <div class="col-main">
+        <section class="card card-input">
+          <div class="card-toolbar">
+            <span class="card-heading">
+              <span class="card-heading-icon" aria-hidden="true">&#128196;</span>
+              Raw Input
+            </span>
+            <div class="toolbar-actions">
+              <label class="btn-ghost">
+                <span class="btn-ghost-icon" aria-hidden="true">&#8681;</span>
+                Upload
+                <input id="fileInput" type="file" class="sr-only" accept=".txt,.md,.json,.csv,.py,.js,.ts,.yaml,.yml,.log,text/plain">
+              </label>
+              <button type="button" id="pasteBtn" class="btn-ghost">Paste</button>
+            </div>
+          </div>
+          <textarea id="promptInput" rows="14" placeholder="Paste your prompt, logs, or JSON configuration here…"></textarea>
+          <div class="card-footer-meta">
+            <span><span id="inputLineCount">0</span> lines</span>
+            <span><span id="inputCharCount">0</span> characters</span>
+          </div>
+          <div class="row-actions">
+            <button type="button" id="clearBtn" class="btn-secondary">Clear</button>
+          </div>
+        </section>
 
-    <section class="card">
-      <h2>Report</h2>
-      <div id="metrics" class="metrics">
-        <div>Total findings: <strong id="findingsCount">0</strong></div>
-        <div>Chars: <strong id="charsMetric">0 -> 0</strong></div>
-        <div>Tokens (estimated): <strong id="tokensMetric">0 -> 0</strong></div>
-      </div>
-      <div id="findingsList" class="findings"></div>
-    </section>
+        <section class="card">
+          <h2 class="section-title">Report</h2>
+          <div id="metrics" class="metrics">
+            <div>Total findings: <strong id="findingsCount">0</strong></div>
+            <div>Chars: <strong id="charsMetric">0 &rarr; 0</strong></div>
+            <div>Tokens (estimated): <strong id="tokensMetric">0 &rarr; 0</strong></div>
+          </div>
+          <div id="findingsList" class="findings"></div>
+        </section>
 
-    <section class="card">
-      <div class="row space-between">
-        <h2>Output</h2>
-        <button id="copyBtn" type="button" class="secondary">Copy output</button>
+        <section class="card card-output">
+          <div class="row space-between">
+            <h2 class="section-title">Output</h2>
+            <button id="copyBtn" type="button" class="btn-secondary">Copy output</button>
+          </div>
+          <textarea id="outputText" rows="12" readonly placeholder="Sanitized text will appear here…"></textarea>
+        </section>
       </div>
-      <textarea id="outputText" rows="12" readonly placeholder="Processed prompt will appear here..."></textarea>
-    </section>
+
+      <aside class="col-side" aria-label="Sanitization rules">
+        <section class="card card-rules">
+          <div class="card-heading card-heading-pad">
+            <span class="card-heading-icon" aria-hidden="true">&#9881;</span>
+            Sanitization Rules
+          </div>
+          <div class="rule-list">
+            <label class="rule-row">
+              <div class="rule-text">
+                <span class="rule-title">Prune API Keys</span>
+                <span class="rule-desc">OpenAI, AWS, Stripe, Telegram, …</span>
+              </div>
+              <input id="pruneApiKeysToggle" type="checkbox" class="switch" checked>
+            </label>
+            <label class="rule-row">
+              <div class="rule-text">
+                <span class="rule-title">Redact PII</span>
+                <span class="rule-desc">Emails, phones, SSNs, …</span>
+              </div>
+              <input id="redactPiiToggle" type="checkbox" class="switch">
+            </label>
+            <label class="rule-row">
+              <div class="rule-text">
+                <span class="rule-title">Generic secrets</span>
+                <span class="rule-desc">JWT-like tokens, labeled keys</span>
+              </div>
+              <input id="genericSecretsToggle" type="checkbox" class="switch">
+            </label>
+          </div>
+          <button id="processBtn" type="button" class="btn-primary">Sanitize Content</button>
+        </section>
+
+        <section class="card card-audit">
+          <div class="card-heading card-heading-pad">
+            <span class="card-heading-icon" aria-hidden="true">&#9675;</span>
+            Live Audit
+          </div>
+          <div id="auditPanel" class="audit-placeholder">
+            <div class="audit-icon" aria-hidden="true">&#128274;</div>
+            <p class="audit-title">Awaiting input</p>
+            <p class="audit-desc">Run <strong>Sanitize Content</strong> to scan locally. Your data never leaves this browser window.</p>
+          </div>
+        </section>
+      </aside>
+    </div>
   </main>
 
   <script src="./app.js"></script>
