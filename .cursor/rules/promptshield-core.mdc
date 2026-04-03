@@ -1,0 +1,11 @@
+---
+description: Core PromptShield conventions — structure, security, commits
+alwaysApply: true
+---
+
+# PromptShield — core
+
+- **Single source for API key regex**: edit `src/promptshield/detector/api_key_rules.json`, then run `python3 scripts/sync_api_key_rules.py` so `web/api_key_rules.json` stays aligned.
+- **Web is client-only**: no backend calls for the MVP; do not add telemetry or secret logging.
+- **Commits**: use Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, …) with optional scope, e.g. `feat(web): …`.
+- **Scope discipline**: match existing style (Black/isort for Python); avoid unrelated refactors in the same change.

@@ -1,0 +1,12 @@
+---
+description: Web MVP (static) — patterns, pipeline, assets
+globs: web/**/*
+alwaysApply: false
+---
+
+# Web MVP
+
+- Load API key rules via `fetch("./api_key_rules.json")` — do not duplicate long regex lists in `app.js`.
+- Pipeline steps: register detect/redact steps; keep future features (e.g. optimize) as new steps.
+- Paths are relative to the deployed site root (`web/` on Vercel); keep `index.html`, `app.js`, `styles.css`, `api_key_rules.json` co-located.
+- After changing detector rules, run `scripts/sync_api_key_rules.py` before shipping web changes.

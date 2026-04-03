@@ -1,0 +1,12 @@
+---
+description: Python package — detector, redactor, tests
+globs: src/**/*.py
+alwaysApply: false
+---
+
+# Python package
+
+- **API key detection**: `APIKeyDetector` loads from `detector/api_key_rules.json` next to `api_keys.py` — extend providers by editing JSON, not by hard-coding large dicts in Python.
+- **Redactor placeholders**: follow existing pattern `[API_KEY_<PROVIDER>]` from provider id in rules.
+- **Tests**: add/adjust cases in `tests/` for new patterns; run with `PYTHONPATH=src pytest tests/ -q` if needed.
+- **Dependencies**: keep `pyproject.toml` accurate; avoid new deps unless necessary for the task.
